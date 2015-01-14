@@ -172,6 +172,26 @@ public class GameRunner extends Observable implements Runnable {
         //Setup the game, main loop
         replayEnabled = false;
         turnLimit = 0;
+        setupBoard();
+        setupColors();
+        setupPlayers();
+        setupReplay();
+        setupView();
+    }
+
+    private void setupReplay(){
+        System.out.println("Would you like to enable replay capability?");
+        System.out.println("(Note: This may cause the program to crash if run on longer games, with larger boards, or with small maximum heap sizes)");
+        String replayEn = sc.next().toLowerCase().trim();
+        if (replayEn.equals("yes") || replayEn.equals("y")) {
+            replayEnabled = true;
+        }
+        if (numPlayers > MAX_PLAYERS) {
+            numPlayers = MAX_PLAYERS;
+        }
+    }
+
+    private void setupBoard(){
         try {
             replay = new HashMap<Integer, Board>();
             System.out.println("Enter number of players: ");
@@ -198,18 +218,23 @@ public class GameRunner extends Observable implements Runnable {
                 System.out.println("Invalid input, defaulting to vision radius of 2");
             }
         }
-        System.out.println("Would you like to enable replay capability?");
-        System.out.println("(Note: This may cause the program to crash if run on longer games, with larger boards, or with small maximum heap sizes)");
-        String replayEn = sc.next().toLowerCase().trim();
-        if (replayEn.equals("yes") || replayEn.equals("y")) {
-            replayEnabled = true;
+        System.out.println("Generating Board:\n");
+        double generateTime = System.currentTimeMillis();
+        BoardGenerator generator = new BoardGenerator(width, height, numPlayers, globalVision, visionRadius);
+        System.out.println("Board generator created");
+        board = generator.generateBoard();
+        startingBoard = new Board(board);
+        System.out.println("Board generated");
+        System.out.println("\nBoard generation took " + (System.currentTimeMillis() - generateTime) / 1000.0 + " seconds\n\n");
+        if(replay!=null) {
+            replay.put(0, new Board(board));
         }
+    }
+
+    private void setupPlayers(){
         if (numPlayers > MAX_PLAYERS) {
             numPlayers = MAX_PLAYERS;
         }
-        setupColors();
-
-        //Generate the players
         for (int i = 0; i < numPlayers; i++) {
             System.out.println("Name for player " + i);
             String name = sc.next().trim();
@@ -261,23 +286,11 @@ public class GameRunner extends Observable implements Runnable {
             }
         }
         System.out.println("Players added\n");
+    }
 
-        //Select view
+    public void setupView(){
         System.out.println("Would you like to see the game with a graphical view (g), a textual view (t), or no view (n)?");
         String response = sc.next().toLowerCase().trim();
-
-        //Generate the Board
-        System.out.println("Generating Board:\n");
-        double generateTime = System.currentTimeMillis();
-        BoardGenerator generator = new BoardGenerator(width, height, numPlayers, globalVision, visionRadius);
-        System.out.println("Board generator created");
-        board = generator.generateBoard();
-        startingBoard = new Board(board);
-        System.out.println("Board generated");
-        System.out.println("\nBoard generation took " + (System.currentTimeMillis() - generateTime) / 1000.0 + " seconds\n\n");
-        replay.put(0, new Board(board));
-
-        //Actually make the view now that the board is built
         if (response.equals("g")) {
             view = new GraphicalView(board, players);
             System.out.println("Selected graphical view");
@@ -287,7 +300,6 @@ public class GameRunner extends Observable implements Runnable {
         } else {
             System.out.println("Selected no view");
         }
-
         //Display first board if view selected
         if (view != null) {
             System.out.println("Starting board: ");
@@ -306,70 +318,78 @@ public class GameRunner extends Observable implements Runnable {
                 System.out.println("turn number: " + board.getTurnCount());
                 double turnStartTime = System.currentTimeMillis();
                 System.out.println(players.size() + " players left");
-                try {
-                    SwingUtilities.invokeAndWait(new Runnable() {
-                        public void run() {
-                            ArrayList<Move> moves = new ArrayList<Move>();
-                            for (Player player : players) {
-                                turnDone = false;
-                                int numAnts = 0;
-                                int numHills = 0;
-                                Ant[][] ants = board.getAnts();
-                                Hill[][] hills = board.getHills();
-                                for (int j = 0; j < board.getWidth(); j++) {
-                                    for (int k = 0; k < board.getHeight(); k++) {
-                                        if (ants[j][k] != null && ants[j][k].getColor().equals(player.getColor())) {
-                                            numAnts++;
-                                        }
-                                        if (hills[j][k] != null && hills[j][k].getColor().equals(player.getColor())) {
-                                            numHills++;
-                                        }
-                                    }
-                                }
-                                System.out.println("Turn: " + board.getTurnCount() + ", Player " + player.getPlayerNumber() + ", " + player.getName() + ", deciding their move with " + numAnts + " ant(s) and " + numHills + " ant hill(s)");
-                                boolean toFinish = false;
-                                InfoBlock playerInfo = board.getInfoForPlayer(player.getColor());
-                                long startTime = System.currentTimeMillis();
-                                player.nextTurn(playerInfo);
-                                double elapsedTime = 0;
-                                while (!toFinish && !turnDone) {
-                                    toFinish = (System.currentTimeMillis() - startTime > turnTime);
-                                    elapsedTime = (System.currentTimeMillis() - startTime);
-                                }
-                                System.out.println("Turn: " + board.getTurnCount() + " took " + player.getName() + " " + elapsedTime / 1000.0 + " seconds");
-                                moves.add(player.getMove());
-                            }
-                            board.nextTurn(moves);
-                        }
-                    });
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                } catch (InvocationTargetException e) {
-                    e.printStackTrace();
-                }
-                if (replayEnabled) {
-                    replay.put(board.getTurnCount(), new Board(board));
-                }
-                if (view != null) {
-                    view.display();
-                }
+                //All the actual work for the turn
+                runTurn();
                 System.out.println("Turn for all players took " + (System.currentTimeMillis() - turnStartTime) / 1000.0 + " seconds\n\n\n");
             }
-
-            //Game is over
-            if (board.getTurnCount() > turnLimit && turnLimit != 0) {
-                System.out.println("turn limit reached");
-                theInstance.setChanged();
-                theInstance.notifyObservers(getGameInfo(true));
-            } else {
-                System.out.println("Winner is " + theInstance.players.get(0));
-                theInstance.setChanged();
-                theInstance.notifyObservers(getGameInfo(false));
-            }
-
-            runReplay();
-            theInstance.playing = false;
+            //Game Done
+            cleanUpGame();
         }
+    }
+
+    private void runTurn(){
+        try {
+            SwingUtilities.invokeAndWait(new Runnable() {
+                public void run() {
+                    ArrayList<Move> moves = new ArrayList<Move>();
+                    for (Player player : players) {
+                        turnDone = false;
+                        int numAnts = 0;
+                        int numHills = 0;
+                        Ant[][] ants = board.getAnts();
+                        Hill[][] hills = board.getHills();
+                        for (int j = 0; j < board.getWidth(); j++) {
+                            for (int k = 0; k < board.getHeight(); k++) {
+                                if (ants[j][k] != null && ants[j][k].getColor().equals(player.getColor())) {
+                                    numAnts++;
+                                }
+                                if (hills[j][k] != null && hills[j][k].getColor().equals(player.getColor())) {
+                                    numHills++;
+                                }
+                            }
+                        }
+                        System.out.println("Turn: " + board.getTurnCount() + ", Player " + player.getPlayerNumber() + ", " + player.getName() + ", deciding their move with " + numAnts + " ant(s) and " + numHills + " ant hill(s)");
+                        boolean toFinish = false;
+                        InfoBlock playerInfo = board.getInfoForPlayer(player.getColor());
+                        long startTime = System.currentTimeMillis();
+                        player.nextTurn(playerInfo);
+                        double elapsedTime = 0;
+                        while (!toFinish && !turnDone) {
+                            toFinish = (System.currentTimeMillis() - startTime > turnTime);
+                            elapsedTime = (System.currentTimeMillis() - startTime);
+                        }
+                        System.out.println("Turn: " + board.getTurnCount() + " took " + player.getName() + " " + elapsedTime / 1000.0 + " seconds");
+                        moves.add(player.getMove());
+                    }
+                    board.nextTurn(moves);
+                }
+            });
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        }
+        if (replayEnabled) {
+            replay.put(board.getTurnCount(), new Board(board));
+        }
+        if (view != null) {
+            view.display();
+        }
+    }
+
+    private void cleanUpGame(){
+        if (board.getTurnCount() > turnLimit && turnLimit != 0) {
+            System.out.println("turn limit reached");
+            theInstance.setChanged();
+            theInstance.notifyObservers(getGameInfo(true));
+        } else {
+            System.out.println("Winner is " + theInstance.players.get(0));
+            theInstance.setChanged();
+            theInstance.notifyObservers(getGameInfo(false));
+        }
+
+        runReplay();
+        theInstance.playing = false;
     }
 
     private void runReplay() {
