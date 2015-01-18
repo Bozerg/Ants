@@ -5,7 +5,6 @@ import Players.Player;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.WindowEvent;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -15,14 +14,12 @@ import java.util.HashSet;
  */
 public class GraphicalView extends View {
 
-    private final ArrayList<Player> players = new ArrayList<Player>();
-    private final JFrame window;
     private final JPanel boardPanel;
     private final int SQUARE_SIZE;
     private final TilePanel[][] tiles;
 
     public GraphicalView(Board board, ArrayList<Player> players) {
-        super(board);
+        super(board,players);
         System.setProperty("java.util.Arrays.useLegacyMergeSort", "true");
         int width = board.getWidth();
         int height = board.getHeight();
@@ -30,13 +27,9 @@ public class GraphicalView extends View {
         int screenHeight = (int) (java.awt.Toolkit.getDefaultToolkit().getScreenSize().getHeight() * 0.9);
         SQUARE_SIZE = Math.min(screenWidth / width, screenHeight / height);
         tiles = new TilePanel[width][height];
-        for (Player p : players) {
-            this.players.add(p);
-        }
-        window = new JFrame("Ants");
-        window.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 
         boardPanel = new JPanel(new GridLayout(height, width));
+
         Hill[][] hills = board.getHills();
         for (int i = 0; i < width; i++) {
             for (int j = 0; j < height; j++) {
@@ -53,9 +46,6 @@ public class GraphicalView extends View {
             }
         }
         boardPanel.setPreferredSize(new Dimension(board.getWidth() * SQUARE_SIZE, board.getHeight() * SQUARE_SIZE));
-        window.add(boardPanel);
-        window.pack();
-        foregroundWindow();
     }
 
     private void resetView() {
@@ -67,16 +57,8 @@ public class GraphicalView extends View {
         }
     }
 
-    public void closeWindow() {
-        window.dispatchEvent(new WindowEvent(window, WindowEvent.WINDOW_CLOSING));
-    }
-
-    public void foregroundWindow() {
-        window.setVisible(true);
-        window.setAlwaysOnTop(true);
-        window.toFront();
-        window.requestFocus();
-        window.setAlwaysOnTop(false);
+    public JPanel getBoardPanel() {
+        return boardPanel;
     }
 
     @Override
@@ -130,7 +112,7 @@ public class GraphicalView extends View {
                             }
                         }
                     }
-                    window.repaint();
+                    SwingUtilities.getWindowAncestor(boardPanel).repaint();
                 }
             });
         } catch (InterruptedException e) {

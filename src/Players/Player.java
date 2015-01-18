@@ -1,6 +1,6 @@
 package Players;
 
-import Controller.GameRunner;
+import Controller.Game;
 import Model.InfoBlock;
 import Model.Move;
 
@@ -46,7 +46,7 @@ public abstract class Player implements Runnable {
 
     protected final void endTurn(){
         turnOver = true;
-        GameRunner.endTurn();
+        Game.endTurn();
     }
 
     public final int getTurnTime(){
@@ -68,7 +68,7 @@ public abstract class Player implements Runnable {
     //kills the player's thread, called by getMove() and nothing else ever!
     private void turnFinished() {
         turnOver = true;
-        GameRunner.endTurn();
+        Game.endTurn();
         t.interrupt();
         try {
             t.join();

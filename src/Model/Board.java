@@ -1,6 +1,6 @@
 package Model;
 
-import Controller.GameRunner;
+import Controller.Game;
 import Players.Player;
 
 import java.awt.*;
@@ -612,21 +612,21 @@ public class Board {
         if (!potentiallyEliminatedPlayers.isEmpty()) {
             for (Color c : potentiallyEliminatedPlayers) {
                 String eliminatedPlayer = "";
-                Player p = GameRunner.getPlayerByColor(c);
+                Player p = Game.getPlayerByColor(c);
                 if (p != null) {
                     eliminatedPlayer = p.toString();
                 }
                 whenEliminated.put(p != null ? p.getColor() : null, turnCount);
                 placing[numPlayersLeft - 1] = p;
                 System.out.println(eliminatedPlayer + " ant colony eliminated");
-                GameRunner.removePlayer(c);
+                Game.removePlayer(c);
                 wipeAntsOfColor(c, resultAntBoard);
                 numPlayersLeft--;
                 if(numPlayersLeft == 1){
                     for(int i = 0; i < width; i++){
                         for(int j = 0; j < height; j++){
                             if(hillBoard[i][j] != null){
-                                placing[0] = GameRunner.getPlayerByColor(hillBoard[i][j].getColor());
+                                placing[0] = Game.getPlayerByColor(hillBoard[i][j].getColor());
                             }
                         }
                     }
