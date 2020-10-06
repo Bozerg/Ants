@@ -1,6 +1,6 @@
 package Training;
 
-import Controller.Game;
+import Controller.GameRunner;
 import Model.Board;
 import Model.BoardGenerator;
 import Model.GameInfoBlock;
@@ -95,7 +95,7 @@ public class GeneticAlgorithm implements Runnable, Observer{
 	
 	private double evaluate_weights(double[] weights) {
 		int turnTime = 10;
-		ArrayList<Color> colors = Game.getColors();
+		ArrayList<Color> colors = GameRunner.getColors();
 		ArrayList<Player> players = new ArrayList<Player>();
 		players.add(new PlayerForces(colors.get(0), 0, turnTime, weights));
 		players.add(new PlayerKamikaze(colors.get(1), 1, turnTime));
@@ -113,7 +113,7 @@ public class GeneticAlgorithm implements Runnable, Observer{
 		BoardGenerator generator = new BoardGenerator(50, 30, players.size(), false, 4);
 		Board board = generator.generateBoard();
 		GraphicalView view = new GraphicalView(board, players);
-		Game game = new Game(board, view, players, turnTime, false, 2500);
+		GameRunner game = new GameRunner(board, view, players, turnTime, false, 2500);
 		game.addObserver(this);
 		gameRunning = true;
 		Thread t = new Thread(game);
@@ -125,7 +125,7 @@ public class GeneticAlgorithm implements Runnable, Observer{
 				e.printStackTrace();
 			}
 		}
-		//view.closeWindow(); //YEAAAA Jon, this breaks MVC hard.
+		view.closeWindow();
 		if (!currentGameInfo.earlyTermination) {
 			if (currentGameInfo.placing[0].getColor().equals(startingPlayers.get(0).getColor())) {
 				score = 10000d;

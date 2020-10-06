@@ -11,9 +11,13 @@ import java.util.HashMap;
  * Created by Bozerg on 11/26/2014.
  */
 public class TextualView extends View{
+    private final ArrayList<Player>  players = new ArrayList<Player>();
 
     public TextualView(Board board, ArrayList<Player> players){
-        super(board,players);
+        super(board);
+        for(Player p : players) {
+            this.players.add(p);
+        }
     }
 
     public void display() {

@@ -1,6 +1,6 @@
 package Model;
 
-import Controller.Game;
+import Controller.GameRunner;
 
 import java.awt.*;
 import java.util.*;
@@ -225,7 +225,7 @@ public class BoardGenerator {
             Hill[][] returnHills = new Hill[width][height];
             Iterator h = hills.iterator();
             int index = 0;
-            ArrayList<Color> colors = Game.getColors();
+            ArrayList<Color> colors = GameRunner.getColors();
             while (h.hasNext()) {
                 Point p = (Point) h.next();
                 Hill hill = new Hill(colors.get(index), p);
